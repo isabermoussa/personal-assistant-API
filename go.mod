@@ -1,4 +1,4 @@
-module github.com/acai-travel/tech-challenge
+module github.com/isabermoussa/personal-assistant-API
 
 go 1.24.1
 

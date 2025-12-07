@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/acai-travel/tech-challenge/internal/chat/model"
 	"github.com/google/uuid"
+	"github.com/isabermoussa/personal-assistant-API/internal/chat/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

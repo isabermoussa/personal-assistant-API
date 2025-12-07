@@ -4,10 +4,11 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/acai-travel/tech-challenge/internal/chat/model"
-	"github.com/acai-travel/tech-challenge/internal/pb"
+	"github.com/isabermoussa/personal-assistant-API/internal/chat/model"
+	"github.com/isabermoussa/personal-assistant-API/internal/pb"
 	"github.com/twitchtv/twirp"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -47,18 +48,43 @@ func (s *Server) StartConversation(ctx context.Context, req *pb.StartConversatio
 		return nil, twirp.RequiredArgumentError("message")
 	}
 
-	// choose a title
-	title, err := s.assist.Title(ctx, conversation)
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to generate conversation title", "error", err)
-	} else {
-		conversation.Title = title
+	// Generate title and reply concurrently for better performance
+	var (
+		title    string
+		titleErr error
+		reply    string
+		replyErr error
+		wg       sync.WaitGroup
+	)
+
+	wg.Add(2)
+
+	// Generate title in background (non-critical)
+	go func() {
+		defer wg.Done()
+		title, titleErr = s.assist.Title(ctx, conversation)
+		if titleErr != nil {
+			slog.ErrorContext(ctx, "Failed to generate conversation title", "error", titleErr)
+		}
+	}()
+
+	// Generate reply in background (critical)
+	go func() {
+		defer wg.Done()
+		reply, replyErr = s.assist.Reply(ctx, conversation)
+	}()
+
+	// Wait for both operations to complete
+	wg.Wait()
+
+	// Check if reply generation failed (critical error)
+	if replyErr != nil {
+		return nil, replyErr
 	}
 
-	// generate a reply
-	reply, err := s.assist.Reply(ctx, conversation)
-	if err != nil {
-		return nil, err
+	// Use generated title if successful, otherwise keep default
+	if titleErr == nil && title != "" {
+		conversation.Title = title
 	}
 
 	conversation.Messages = append(conversation.Messages, &model.Message{

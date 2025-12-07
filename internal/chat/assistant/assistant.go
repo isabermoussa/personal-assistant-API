@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/acai-travel/tech-challenge/internal/chat/model"
 	ics "github.com/arran4/golang-ical"
+	"github.com/isabermoussa/personal-assistant-API/internal/chat/model"
 	"github.com/openai/openai-go/v2"
 )
 
@@ -28,16 +28,16 @@ func (a *Assistant) Title(ctx context.Context, conv *model.Conversation) (string
 	}
 
 	slog.InfoContext(ctx, "Generating title for conversation", "conversation_id", conv.ID)
-
-	msgs := make([]openai.ChatCompletionMessageParamUnion, len(conv.Messages))
-
-	msgs[0] = openai.AssistantMessage("Generate a concise, descriptive title for the conversation based on the user message. The title should be a single line, no more than 80 characters, and should not include any special characters or emojis.")
-	for i, m := range conv.Messages {
-		msgs[i] = openai.UserMessage(m.Content)
+	// Build messages array: system instruction first, then user messages
+	msgs := []openai.ChatCompletionMessageParamUnion{
+		openai.SystemMessage("You are a title generator. Extract the main topic from the user's message and create a short, descriptive title. Do NOT answer the question. Examples: 'What is the weather like in Barcelona?' → 'Weather in Barcelona'. Maximum 80 characters, no quotes."),
+	}
+	for _, m := range conv.Messages {
+		msgs = append(msgs, openai.UserMessage(m.Content))
 	}
 
 	resp, err := a.cli.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:    openai.ChatModelO1,
+		Model:    openai.ChatModelGPT4o,
 		Messages: msgs,
 	})
 

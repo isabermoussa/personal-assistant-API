@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/acai-travel/tech-challenge/internal/pb"
+	"github.com/isabermoussa/personal-assistant-API/internal/pb"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
