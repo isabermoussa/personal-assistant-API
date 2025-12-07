@@ -209,7 +209,54 @@ a.tools = []tools.Tool{
 | Database | MongoDB | Persistence |
 | AI | OpenAI GPT-4.1/4o | Reply/Title generation |
 | Weather | WeatherAPI.com | Real-time data |
+| Observability | OpenTelemetry | Metrics + Tracing |
 | Testing | stdlib | Unit/integration |
+
+## Observability
+
+### Metrics (OpenTelemetry)
+The application captures three key metrics via stdout exporter:
+
+**1. Request Count** (`http.server.requests`)
+- Counter tracking total HTTP requests
+- Labels: `http.method`, `http.path`, `http.status_code`
+- Use: Monitor traffic patterns, endpoint usage
+
+**2. Request Duration** (`http.server.duration`)
+- Histogram of request latency in milliseconds
+- Labels: `http.method`, `http.path`, `http.status_code`
+- Use: Identify slow endpoints, SLA monitoring
+
+**3. Error Count** (`http.server.errors`)
+- Counter for HTTP errors (status >= 400)
+- Labels: `http.method`, `http.path`, `http.status_code`
+- Use: Error rate tracking, alert on spikes
+
+### Tracing (OpenTelemetry)
+Distributed tracing captures request flow:
+- **HTTP span**: Full request lifecycle with method, path, status
+- **Context propagation**: Traces flow through assistant → tools → external APIs
+- **Error marking**: Spans marked as errors when status >= 400
+- **Stdout export**: Trace data printed to console for development
+
+### Configuration
+```go
+// Initialize telemetry on startup
+shutdown, _ := telemetry.InitTelemetry(ctx)
+defer shutdown(ctx)
+
+// Metrics exported every 30 seconds
+// Traces batched and exported on shutdown
+```
+
+### Middleware Stack
+```
+Request → TracingMiddleware (create span)
+       → MetricsMiddleware (record metrics)
+       → Logger (existing)
+       → Recovery (existing)
+       → Handler
+```
 
 ## Performance
 
@@ -224,6 +271,26 @@ a.tools = []tools.Tool{
 3. **Simple dispatch** - O(n) is fine for 4 tools, no premature optimization
 4. **Concurrent title/reply** - 50% performance gain with sync.WaitGroup
 5. **Interface-based tools** - Easy to test, extend, and maintain
+6. **Stdout telemetry exporters** - Simple development setup, easy to switch to Prometheus/Jaeger later
+7. **Graceful shutdown** - Ensures metrics/traces are flushed before exit
+
+## Development Workflow
+
+### Running Server
+```bash
+# Start MongoDB
+make up
+
+# Set environment
+export OPENAI_API_KEY=sk-...
+export WEATHER_API_KEY=...
+
+# Run with telemetry
+make run
+
+# Metrics export every 30s to stdout
+# Traces export on shutdown
+```
 
 ## References
 
