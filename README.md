@@ -74,10 +74,12 @@ Set up a repository:
 2. Commit the changes as **"Initial commit"** to set your starting point.
 
 Start the application:
-1. Set your OpenAI API key in the environment variable `OPENAI_API_KEY`.
+1. Set your OpenAI API key and Weather API key in the environment variables:
    ```bash
    export OPENAI_API_KEY=your_openai_api_key
+   export WEATHER_API_KEY=your_weatherapi_key
    ```
+   > **Note:** Get your free Weather API key from [WeatherAPI.com](https://www.weatherapi.com/signup.aspx). The assistant uses this for real-time weather information and forecasts.
 2. Use make to start MongoDB and the application. Make sure docker daemon is running.
    ```bash
    make up run

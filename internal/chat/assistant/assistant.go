@@ -15,11 +15,15 @@ import (
 )
 
 type Assistant struct {
-	cli openai.Client
+	cli           openai.Client
+	weatherClient *WeatherClient
 }
 
 func New() *Assistant {
-	return &Assistant{cli: openai.NewClient()}
+	return &Assistant{
+		cli:           openai.NewClient(),
+		weatherClient: NewWeatherClient(),
+	}
 }
 
 func (a *Assistant) Title(ctx context.Context, conv *model.Conversation) (string, error) {
@@ -87,12 +91,19 @@ func (a *Assistant) Reply(ctx context.Context, conv *model.Conversation) (string
 			Tools: []openai.ChatCompletionToolUnionParam{
 				openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
 					Name:        "get_weather",
-					Description: openai.String("Get weather at the given location"),
+					Description: openai.String("Get current weather or multi-day forecast for a given location. Use forecast_days for future weather predictions (1-10 days)."),
 					Parameters: openai.FunctionParameters{
 						"type": "object",
 						"properties": map[string]any{
 							"location": map[string]string{
-								"type": "string",
+								"type":        "string",
+								"description": "City name, coordinates (lat,lon), or location query (e.g., 'Barcelona', 'Paris, France', '48.8567,2.3508')",
+							},
+							"forecast_days": map[string]any{
+								"type":        "integer",
+								"description": "Number of days of forecast (1-10). Omit or set to 0 for current weather only. Use this when user asks about future weather or multi-day forecasts.",
+								"minimum":     1,
+								"maximum":     3,
 							},
 						},
 						"required": []string{"location"},
@@ -142,7 +153,37 @@ func (a *Assistant) Reply(ctx context.Context, conv *model.Conversation) (string
 
 				switch call.Function.Name {
 				case "get_weather":
-					msgs = append(msgs, openai.ToolMessage("weather is fine", call.ID))
+					// Parse tool call arguments
+					var weatherArgs struct {
+						Location     string `json:"location"`
+						ForecastDays int    `json:"forecast_days,omitempty"`
+					}
+
+					if err := json.Unmarshal([]byte(call.Function.Arguments), &weatherArgs); err != nil {
+						msgs = append(msgs, openai.ToolMessage("failed to parse weather request: "+err.Error(), call.ID))
+						break
+					}
+
+					// Determine if forecast is requested
+					if weatherArgs.ForecastDays > 0 {
+						// Get forecast
+						forecast, err := a.weatherClient.GetForecast(ctx, weatherArgs.Location, weatherArgs.ForecastDays)
+						if err != nil {
+							slog.ErrorContext(ctx, "Failed to fetch weather forecast", "error", err, "location", weatherArgs.Location)
+							msgs = append(msgs, openai.ToolMessage("Failed to fetch weather forecast: "+err.Error(), call.ID))
+							break
+						}
+						msgs = append(msgs, openai.ToolMessage(FormatForecast(forecast), call.ID))
+					} else {
+						// Get current weather
+						weather, err := a.weatherClient.GetCurrentWeather(ctx, weatherArgs.Location)
+						if err != nil {
+							slog.ErrorContext(ctx, "Failed to fetch current weather", "error", err, "location", weatherArgs.Location)
+							msgs = append(msgs, openai.ToolMessage("Failed to fetch weather: "+err.Error(), call.ID))
+							break
+						}
+						msgs = append(msgs, openai.ToolMessage(FormatCurrentWeather(weather), call.ID))
+					}
 				case "get_today_date":
 					msgs = append(msgs, openai.ToolMessage(time.Now().Format(time.RFC3339), call.ID))
 				case "get_holidays":
