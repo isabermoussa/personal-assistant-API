@@ -1,4 +1,4 @@
-package assistant
+package weather
 
 import (
 	"context"
@@ -14,7 +14,7 @@ func TestWeatherClient_GetCurrentWeather(t *testing.T) {
 		t.Skip("Skipping weather API test: WEATHER_API_KEY not set")
 	}
 
-	client := NewWeatherClient()
+	client := NewClient()
 	ctx := context.Background()
 
 	t.Run("gets current weather for Barcelona", func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestWeatherClient_GetForecast(t *testing.T) {
 		t.Skip("Skipping weather API test: WEATHER_API_KEY not set")
 	}
 
-	client := NewWeatherClient()
+	client := NewClient()
 	ctx := context.Background()
 
 	t.Run("gets 3-day forecast for Barcelona", func(t *testing.T) {
@@ -254,7 +254,7 @@ func TestWeatherClient_NoAPIKey(t *testing.T) {
 	os.Setenv("WEATHER_API_KEY", "")
 	defer os.Setenv("WEATHER_API_KEY", originalKey)
 
-	client := NewWeatherClient()
+	client := NewClient()
 	ctx := context.Background()
 
 	t.Run("returns error when API key not set for current weather", func(t *testing.T) {

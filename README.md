@@ -36,6 +36,7 @@ Currently, the assistant can:
 We expect you to be able to navigate and figure out the codebase on your own, but here are some key takeaways to give 
 you a boost:
 
+- **📖 [See ARCHITECTURE.md for detailed system architecture and design decisions](ARCHITECTURE.md)**
 - There is a `Makefile` with a few handy commands like `make up` and `make run`.
 - The entry point to the application is in `cmd/server/main.go`, but the main logic lives in `internal/chat/server.go`.
 - The application stores conversations in a [MongoDB](https://www.mongodb.com/) database. There's a docker compose file 
